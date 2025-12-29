@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Transformer 学習可視化</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            grid-template-rows: auto 1fr auto;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+        }
+        
+        .header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 10px;
+        }
+        
+        .header h1 {
+            font-size: 1.5em;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .status {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        
+        .status-label {
+            font-size: 0.8em;
+            color: #888;
+        }
+        
+        .main-canvas {
+            background: #0f0f1a;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .panel {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .panel h3 {
+            margin-bottom: 10px;
+            color: #00d4ff;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .training-text {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            background: #0a0a0f;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 150px;
+            overflow-y: auto;
+            word-break: break-all;
+        }
+        
+        .training-text .highlight {
+            background: rgba(0, 212, 255, 0.3);
+            color: #00d4ff;
+        }
+        
+        .weight-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .weight-stat {
+            background: #0a0a0f;
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .weight-stat .value {
+            font-size: 1.2em;
+            color: #7b2cbf;
+        }
+        
+        .weight-stat .label {
+            font-size: 0.7em;
+            color: #666;
+        }
+        
+        .loss-chart {
+            height: 100px;
+            background: #0a0a0f;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .loss-line {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #00d4ff;
+        }
+        
+        .footer {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px;
+        }
+        
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8em;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+        }
+        
+        .connection-status.connected {
+            background: rgba(0, 255, 0, 0.2);
+            color: #0f0;
+        }
+        
+        .connection-status.disconnected {
+            background: rgba(255, 0, 0, 0.2);
+            color: #f00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 Mini Transformer 学習可視化</h1>
+            <div class="status">
+                <div class="status-item">
+                    <div class="status-value" id="step">0</div>
+                    <div class="status-label">Step</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="loss">-</div>
+                    <div class="status-label">Loss</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="lr">-</div>
+                    <div class="status-label">Learning Rate</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-canvas" id="canvas-container"></div>
+        
+        <div class="sidebar">
+            <div class="panel">
+                <h3>📝 学習中のテキスト</h3>
+                <div class="training-text" id="training-text">
+                    接続待機中...
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>📊 重みの統計</h3>
+                <div class="weight-stats" id="weight-stats">
+                    <div class="weight-stat">
+                        <div class="value" id="weight-mean">-</div>
+                        <div class="label">平均</div>
+                    </div>
+                    <div class="weight-stat">
+                        <div class="value" id="weight-std">-</div>
+                        <div class="label">標準偏差</div>
+                    </div>
+                    <div class="weight-stat">
+                        <div class="value" id="weight-min">-</div>
+                        <div class="label">最小</div>
+                    </div>
+                    <div class="weight-stat">
+                        <div class="value" id="weight-max">-</div>
+                        <div class="label">最大</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>📈 Loss推移</h3>
+                <canvas id="loss-chart" width="370" height="100"></canvas>
+            </div>
+            
+            <div class="panel">
+                <h3>🎯 層の選択</h3>
+                <select id="layer-select" style="width: 100%; padding: 8px; background: #0a0a0f; color: #e0e0e0; border: none; border-radius: 5px;">
+                    <option value="token_embedding.embedding.weight">Token Embedding</option>
+                    <option value="blocks.0.attention.q_proj.weight">Attention Q (Layer 0)</option>
+                    <option value="blocks.0.ff.net.0.weight">FFN (Layer 0)</option>
+                    <option value="blocks.2.attention.q_proj.weight">Attention Q (Layer 2)</option>
+                    <option value="blocks.5.attention.q_proj.weight">Attention Q (Layer 5)</option>
+                    <option value="output.weight">Output</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="legend">
+                <div class="legend-color" style="background: #00d4ff;"></div>
+                <span>正の重み</span>
+            </div>
+            <div class="legend">
+                <div class="legend-color" style="background: #7b2cbf;"></div>
+                <span>負の重み</span>
+            </div>
+            <div class="legend">
+                <div class="legend-color" style="background: #333;"></div>
+                <span>ゼロ付近</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="connection-status disconnected" id="connection-status">
+        切断中
+    </div>
+
+    <script>
+        // PixiJS アプリケーション
+        let app;
+        let particles = [];
+        let weightData = {};
+        let selectedLayer = 'token_embedding.embedding.weight';
+        let lossHistory = [];
+        let ws;
+        
+        // 初期化
+        async function init() {
+            const container = document.getElementById('canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            // PixiJS アプリケーション作成
+            app = new PIXI.Application({
+                width: width,
+                height: height,
+                backgroundColor: 0x0f0f1a,
+                antialias: true,
+            });
+            
+            container.appendChild(app.view);
+            
+            // パーティクルコンテナ
+            const particleContainer = new PIXI.Container();
+            app.stage.addChild(particleContainer);
+            
+            // 初期パーティクル生成
+            createParticles(particleContainer, 1000);
+            
+            // アニメーションループ
+            app.ticker.add(animate);
+            
+            // WebSocket接続
+            connectWebSocket();
+            
+            // 層選択イベント
+            document.getElementById('layer-select').addEventListener('change', (e) => {
+                selectedLayer = e.target.value;
+                updateVisualization();
+            });
+            
+            // リサイズ対応
+            window.addEventListener('resize', () => {
+                const newWidth = container.clientWidth;
+                const newHeight = container.clientHeight;
+                app.renderer.resize(newWidth, newHeight);
+            });
+        }
+        
+        // パーティクル生成
+        function createParticles(container, count) {
+            const width = app.renderer.width;
+            const height = app.renderer.height;
+            
+            for (let i = 0; i < count; i++) {
+                const particle = new PIXI.Graphics();
+                particle.beginFill(0x333333);
+                particle.drawCircle(0, 0, 3);
+                particle.endFill();
+                
+                // グリッド配置
+                const cols = Math.ceil(Math.sqrt(count * width / height));
+                const rows = Math.ceil(count / cols);
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                
+                particle.x = (col + 0.5) * (width / cols);
+                particle.y = (row + 0.5) * (height / rows);
+                particle.targetX = particle.x;
+                particle.targetY = particle.y;
+                particle.value = 0;
+                particle.velocity = { x: 0, y: 0 };
+                
+                container.addChild(particle);
+                particles.push(particle);
+            }
+        }
+        
+        // 重みに基づいてパーティクルを更新
+        function updateVisualization() {
+            if (!weightData[selectedLayer]) return;
+            
+            const data = weightData[selectedLayer];
+            const values = data.values || [];
+            
+            // 統計情報を更新
+            document.getElementById('weight-mean').textContent = data.mean?.toFixed(4) || '-';
+            document.getElementById('weight-std').textContent = data.std?.toFixed(4) || '-';
+            document.getElementById('weight-min').textContent = data.min?.toFixed(4) || '-';
+            document.getElementById('weight-max').textContent = data.max?.toFixed(4) || '-';
+            
+            // パーティクルの色と位置を更新
+            const width = app.renderer.width;
+            const height = app.renderer.height;
+            
+            particles.forEach((particle, i) => {
+                const value = values[i % values.length] || 0;
+                particle.value = value;
+                
+                // 色を重みの値に基づいて設定
+                let color;
+                if (value > 0.01) {
+                    // 正の値: シアン系
+                    const intensity = Math.min(1, Math.abs(value) * 10);
+                    color = interpolateColor(0x333333, 0x00d4ff, intensity);
+                } else if (value < -0.01) {
+                    // 負の値: 紫系
+                    const intensity = Math.min(1, Math.abs(value) * 10);
+                    color = interpolateColor(0x333333, 0x7b2cbf, intensity);
+                } else {
+                    // ゼロ付近: グレー
+                    color = 0x333333;
+                }
+                
+                particle.clear();
+                particle.beginFill(color);
+                particle.drawCircle(0, 0, 2 + Math.abs(value) * 20);
+                particle.endFill();
+                
+                // 重みの値に基づいて位置を微調整
+                const offsetX = value * 50;
+                const offsetY = Math.sin(value * 10 + Date.now() * 0.001) * 5;
+                particle.targetX = particle.x + offsetX;
+                particle.targetY = particle.y + offsetY;
+            });
+        }
+        
+        // 色の補間
+        function interpolateColor(color1, color2, factor) {
+            const r1 = (color1 >> 16) & 0xff;
+            const g1 = (color1 >> 8) & 0xff;
+            const b1 = color1 & 0xff;
+            
+            const r2 = (color2 >> 16) & 0xff;
+            const g2 = (color2 >> 8) & 0xff;
+            const b2 = color2 & 0xff;
+            
+            const r = Math.round(r1 + (r2 - r1) * factor);
+            const g = Math.round(g1 + (g2 - g1) * factor);
+            const b = Math.round(b1 + (b2 - b1) * factor);
+            
+            return (r << 16) | (g << 8) | b;
+        }
+        
+        // アニメーション
+        function animate(delta) {
+            particles.forEach(particle => {
+                // スムーズな移動
+                particle.x += (particle.targetX - particle.x) * 0.1;
+                particle.y += (particle.targetY - particle.y) * 0.1;
+                
+                // 微細な揺らぎ
+                particle.x += Math.sin(Date.now() * 0.002 + particle.value * 100) * 0.2;
+                particle.y += Math.cos(Date.now() * 0.002 + particle.value * 100) * 0.2;
+            });
+        }
+        
+        // WebSocket接続
+        function connectWebSocket() {
+            const statusEl = document.getElementById('connection-status');
+            
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            
+            ws.onopen = () => {
+                statusEl.textContent = '接続中';
+                statusEl.className = 'connection-status connected';
+                console.log('WebSocket接続成功');
+            };
+            
+            ws.onclose = () => {
+                statusEl.textContent = '切断中';
+                statusEl.className = 'connection-status disconnected';
+                console.log('WebSocket切断');
+                
+                // 再接続
+                setTimeout(connectWebSocket, 3000);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocketエラー:', error);
+            };
+            
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                handleMessage(message);
+            };
+        }
+        
+        // メッセージ処理
+        function handleMessage(message) {
+            switch (message.type) {
+                case 'init':
+                case 'checkpoint':
+                    if (message.data.weights) {
+                        weightData = message.data.weights;
+                        updateVisualization();
+                    }
+                    updateStatus(message.data);
+                    break;
+                    
+                case 'training_update':
+                    updateStatus(message.data);
+                    addLossPoint(message.data.loss);
+                    break;
+                    
+                case 'training_text':
+                    updateTrainingText(message.data);
+                    break;
+            }
+        }
+        
+        // ステータス更新
+        function updateStatus(data) {
+            if (data.step !== undefined) {
+                document.getElementById('step').textContent = data.step.toLocaleString();
+            }
+            if (data.loss !== undefined) {
+                document.getElementById('loss').textContent = data.loss.toFixed(4);
+            }
+            if (data.lr !== undefined) {
+                document.getElementById('lr').textContent = data.lr.toExponential(2);
+            }
+        }
+        
+        // 学習テキスト更新
+        function updateTrainingText(data) {
+            const el = document.getElementById('training-text');
+            const text = data.text || '';
+            
+            // 文字をハイライト付きで表示
+            let html = '';
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (i < 10) {
+                    html += `<span class="highlight">${escapeHtml(char)}</span>`;
+                } else {
+                    html += escapeHtml(char);
+                }
+            }
+            el.innerHTML = html;
+        }
+        
+        // HTMLエスケープ
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Loss履歴に追加
+        function addLossPoint(loss) {
+            lossHistory.push(loss);
+            if (lossHistory.length > 100) {
+                lossHistory.shift();
+            }
+            drawLossChart();
+        }
+        
+        // Lossチャート描画
+        function drawLossChart() {
+            const canvas = document.getElementById('loss-chart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            if (lossHistory.length < 2) return;
+            
+            const maxLoss = Math.max(...lossHistory);
+            const minLoss = Math.min(...lossHistory);
+            const range = maxLoss - minLoss || 1;
+            
+            ctx.strokeStyle = '#00d4ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            lossHistory.forEach((loss, i) => {
+                const x = (i / (lossHistory.length - 1)) * width;
+                const y = height - ((loss - minLoss) / range) * height * 0.8 - height * 0.1;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            
+            ctx.stroke();
+            
+            // グラデーション塗りつぶし
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, 'rgba(0, 212, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
+            
+            ctx.lineTo(width, height);
+            ctx.lineTo(0, height);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+        }
+        
+        // 初期化実行
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
