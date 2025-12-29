@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Training data (large files)
+phase1/data/wikipedia_ja_1gb.txt
+phase1/data/*.txt
+!phase1/data/sample.txt
+
+# Training logs
+*.log
+training.log
+
+# Checkpoints (large files)
+phase1/checkpoints/*.pt
+
+# pyenv
+.python-version
