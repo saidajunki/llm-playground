@@ -212,7 +212,7 @@ def main():
     print(f"Using device: {device}")
     
     # チェックポイント読み込み
-    checkpoint = torch.load(args.checkpoint, map_location='cpu')
+    checkpoint = torch.load(args.checkpoint, map_location='cpu', weights_only=False)
     config = checkpoint['config']
     
     # モデル作成と重み読み込み

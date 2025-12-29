@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Transformer Playground</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --text-primary: #eaeaea;
+            --text-secondary: #a0a0a0;
+            --accent: #e94560;
+            --accent-hover: #ff6b6b;
+            --user-bubble: #0f3460;
+            --ai-bubble: #1a1a2e;
+            --border: #2a2a4a;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .playground-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* サイドバー */
+        .settings-panel {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+        
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+        
+        .panel-section {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .section-title {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* チェックポイント選択 */
+        .checkpoint-select {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        
+        .checkpoint-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        /* パラメータスライダー */
+        .param-group {
+            margin-bottom: 15px;
+        }
+        
+        .param-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+        
+        .param-value {
+            color: var(--accent);
+            font-weight: 500;
+        }
+        
+        .param-slider {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: var(--bg-primary);
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        .param-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        
+        .param-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        
+        /* モデル情報 */
+        .model-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .model-info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .model-info-label {
+            color: var(--text-secondary);
+        }
+        
+        /* チャットエリア */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+        }
+        
+        .chat-header {
+            padding: 15px 20px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        
+        .clear-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .clear-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        /* メッセージコンテナ */
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        .message.user {
+            align-self: flex-end;
+            background: var(--user-bubble);
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message.assistant {
+            align-self: flex-start;
+            background: var(--ai-bubble);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message.error {
+            background: rgba(233, 69, 96, 0.2);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        /* タイピングインジケータ */
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            padding: 12px 16px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-8px); }
+        }
+        
+        /* カーソル */
+        .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            background: var(--accent);
+            animation: blink 1s infinite;
+            vertical-align: text-bottom;
+            margin-left: 2px;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        /* 入力エリア */
+        .input-area {
+            padding: 20px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            resize: none;
+            min-height: 48px;
+            max-height: 150px;
+        }
+        
+        .message-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .message-input::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .send-btn {
+            padding: 12px 24px;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .send-btn:hover {
+            background: var(--accent-hover);
+        }
+        
+        .send-btn:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+        }
+        
+        /* ローディング */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* 接続状態 */
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4caf50;
+        }
+        
+        .status-dot.disconnected {
+            background: var(--accent);
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .playground-container {
+                flex-direction: column;
+            }
+            
+            .settings-panel {
+                width: 100%;
+                max-height: 40vh;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="playground-container">
+        <!-- サイドバー -->
+        <aside class="settings-panel">
+            <div class="panel-title">🤖 Mini Transformer</div>
+            
+            <!-- チェックポイント選択 -->
+            <div class="panel-section">
+                <div class="section-title">チェックポイント</div>
+                <select id="checkpoint-select" class="checkpoint-select">
+                    <option value="">選択してください...</option>
+                </select>
+            </div>
+            
+            <!-- 生成パラメータ -->
+            <div class="panel-section">
+                <div class="section-title">生成パラメータ</div>
+                
+                <div class="param-group">
+                    <div class="param-label">
+                        <span>Temperature</span>
+                        <span class="param-value" id="temp-value">0.8</span>
+                    </div>
+                    <input type="range" class="param-slider" id="temperature" 
+                           min="0" max="2" step="0.1" value="0.8">
+                </div>
+                
+                <div class="param-group">
+                    <div class="param-label">
+                        <span>Top-K</span>
+                        <span class="param-value" id="topk-value">50</span>
+                    </div>
+                    <input type="range" class="param-slider" id="top-k" 
+                           min="0" max="100" step="1" value="50">
+                </div>
+                
+                <div class="param-group">
+                    <div class="param-label">
+                        <span>Max Tokens</span>
+                        <span class="param-value" id="maxtokens-value">100</span>
+                    </div>
+                    <input type="range" class="param-slider" id="max-tokens" 
+                           min="1" max="500" step="1" value="100">
+                </div>
+            </div>
+            
+            <!-- モデル情報 -->
+            <div class="panel-section" id="model-info-panel">
+                <div class="section-title">モデル情報</div>
+                <div id="model-info">
+                    <div class="model-info-item">
+                        <span class="model-info-label">状態</span>
+                        <span>未読み込み</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 接続状態 -->
+            <div class="connection-status">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">接続中...</span>
+            </div>
+        </aside>
+        
+        <!-- チャットエリア -->
+        <main class="chat-area">
+            <div class="chat-header">
+                <div class="chat-title">Playground</div>
+                <button class="clear-btn" id="clear-btn">クリア</button>
+            </div>
+            
+            <div class="messages-container" id="messages">
+                <div class="message assistant">
+                    こんにちは！チェックポイントを選択して、テキスト生成を試してみてください。
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea 
+                        class="message-input" 
+                        id="message-input" 
+                        placeholder="メッセージを入力..."
+                        rows="1"
+                    ></textarea>
+                    <button class="send-btn" id="send-btn" disabled>送信</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- ローディングオーバーレイ -->
+    <div class="loading-overlay hidden" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script>
+        // WebSocket Client
+        class WebSocketClient {
+            constructor(url) {
+                this.url = url;
+                this.ws = null;
+                this.onMessageCallback = null;
+                this.onErrorCallback = null;
+                this.onOpenCallback = null;
+                this.onCloseCallback = null;
+            }
+            
+            connect() {
+                this.ws = new WebSocket(this.url);
+                
+                this.ws.onopen = () => {
+                    if (this.onOpenCallback) this.onOpenCallback();
+                };
+                
+                this.ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (this.onMessageCallback) this.onMessageCallback(data);
+                };
+                
+                this.ws.onerror = (error) => {
+                    if (this.onErrorCallback) this.onErrorCallback(error);
+                };
+                
+                this.ws.onclose = () => {
+                    if (this.onCloseCallback) this.onCloseCallback();
+                };
+            }
+            
+            send(data) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(data));
+                }
+            }
+            
+            close() {
+                if (this.ws) this.ws.close();
+            }
+            
+            get isConnected() {
+                return this.ws && this.ws.readyState === WebSocket.OPEN;
+            }
+        }
+
+        // Chat UI Manager
+        class ChatUI {
+            constructor(container) {
+                this.container = container;
+                this.currentAssistantMessage = null;
+            }
+            
+            addUserMessage(text) {
+                const msg = document.createElement('div');
+                msg.className = 'message user';
+                msg.textContent = text;
+                this.container.appendChild(msg);
+                this.scrollToBottom();
+            }
+            
+            addAssistantMessage() {
+                const msg = document.createElement('div');
+                msg.className = 'message assistant';
+                msg.innerHTML = '<span class="cursor"></span>';
+                this.container.appendChild(msg);
+                this.currentAssistantMessage = msg;
+                this.scrollToBottom();
+                return msg;
+            }
+            
+            appendToLastMessage(token) {
+                if (this.currentAssistantMessage) {
+                    const cursor = this.currentAssistantMessage.querySelector('.cursor');
+                    if (cursor) {
+                        cursor.insertAdjacentText('beforebegin', token);
+                    } else {
+                        this.currentAssistantMessage.textContent += token;
+                    }
+                    this.scrollToBottom();
+                }
+            }
+            
+            finishLastMessage() {
+                if (this.currentAssistantMessage) {
+                    const cursor = this.currentAssistantMessage.querySelector('.cursor');
+                    if (cursor) cursor.remove();
+                    this.currentAssistantMessage = null;
+                }
+            }
+            
+            addErrorMessage(text) {
+                const msg = document.createElement('div');
+                msg.className = 'message assistant error';
+                msg.textContent = '⚠️ ' + text;
+                this.container.appendChild(msg);
+                this.scrollToBottom();
+            }
+            
+            showTypingIndicator() {
+                const indicator = document.createElement('div');
+                indicator.className = 'message assistant typing-indicator';
+                indicator.id = 'typing-indicator';
+                indicator.innerHTML = `
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                `;
+                this.container.appendChild(indicator);
+                this.scrollToBottom();
+            }
+            
+            hideTypingIndicator() {
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) indicator.remove();
+            }
+            
+            clearMessages() {
+                this.container.innerHTML = '';
+            }
+            
+            scrollToBottom() {
+                this.container.scrollTop = this.container.scrollHeight;
+            }
+        }
+
+        // Playground App
+        class PlaygroundApp {
+            constructor() {
+                this.wsClient = null;
+                this.chatUI = new ChatUI(document.getElementById('messages'));
+                this.isGenerating = false;
+                this.modelLoaded = false;
+                
+                this.elements = {
+                    checkpointSelect: document.getElementById('checkpoint-select'),
+                    temperature: document.getElementById('temperature'),
+                    topK: document.getElementById('top-k'),
+                    maxTokens: document.getElementById('max-tokens'),
+                    tempValue: document.getElementById('temp-value'),
+                    topkValue: document.getElementById('topk-value'),
+                    maxtokensValue: document.getElementById('maxtokens-value'),
+                    messageInput: document.getElementById('message-input'),
+                    sendBtn: document.getElementById('send-btn'),
+                    clearBtn: document.getElementById('clear-btn'),
+                    modelInfo: document.getElementById('model-info'),
+                    statusDot: document.getElementById('status-dot'),
+                    statusText: document.getElementById('status-text'),
+                    loadingOverlay: document.getElementById('loading-overlay')
+                };
+                
+                this.init();
+            }
+            
+            async init() {
+                this.bindEvents();
+                await this.loadCheckpoints();
+                this.connectWebSocket();
+            }
+            
+            bindEvents() {
+                // パラメータスライダー
+                this.elements.temperature.addEventListener('input', (e) => {
+                    this.elements.tempValue.textContent = e.target.value;
+                });
+                this.elements.topK.addEventListener('input', (e) => {
+                    this.elements.topkValue.textContent = e.target.value;
+                });
+                this.elements.maxTokens.addEventListener('input', (e) => {
+                    this.elements.maxtokensValue.textContent = e.target.value;
+                });
+                
+                // チェックポイント選択
+                this.elements.checkpointSelect.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        this.selectCheckpoint(e.target.value);
+                    }
+                });
+                
+                // 送信
+                this.elements.sendBtn.addEventListener('click', () => this.sendMessage());
+                this.elements.messageInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+                
+                // テキストエリア自動リサイズ
+                this.elements.messageInput.addEventListener('input', (e) => {
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                });
+                
+                // クリア
+                this.elements.clearBtn.addEventListener('click', () => this.clearChat());
+            }
+
+            async loadCheckpoints() {
+                try {
+                    const response = await fetch('/api/checkpoints');
+                    const data = await response.json();
+                    
+                    this.elements.checkpointSelect.innerHTML = '<option value="">選択してください...</option>';
+                    
+                    data.checkpoints.forEach(cp => {
+                        const option = document.createElement('option');
+                        option.value = cp.name;
+                        option.textContent = `Step ${cp.step} (Loss: ${cp.loss})`;
+                        this.elements.checkpointSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Failed to load checkpoints:', error);
+                    this.chatUI.addErrorMessage('チェックポイントの読み込みに失敗しました');
+                }
+            }
+            
+            async selectCheckpoint(name) {
+                this.showLoading(true);
+                
+                try {
+                    const response = await fetch('/api/load-checkpoint', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ checkpoint: name })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    this.updateModelInfo(data.model_info);
+                    this.modelLoaded = true;
+                    this.elements.sendBtn.disabled = false;
+                    
+                    this.chatUI.addAssistantMessage();
+                    this.chatUI.appendToLastMessage(`✅ ${name} を読み込みました。何か入力してみてください！`);
+                    this.chatUI.finishLastMessage();
+                    
+                } catch (error) {
+                    console.error('Failed to load checkpoint:', error);
+                    this.chatUI.addErrorMessage('チェックポイントの読み込みに失敗しました: ' + error.message);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+            
+            updateModelInfo(info) {
+                this.elements.modelInfo.innerHTML = `
+                    <div class="model-info-item">
+                        <span class="model-info-label">Checkpoint</span>
+                        <span>${info.checkpoint_name}</span>
+                    </div>
+                    <div class="model-info-item">
+                        <span class="model-info-label">Parameters</span>
+                        <span>${(info.total_params / 1000000).toFixed(1)}M</span>
+                    </div>
+                    <div class="model-info-item">
+                        <span class="model-info-label">Vocab Size</span>
+                        <span>${info.vocab_size.toLocaleString()}</span>
+                    </div>
+                    <div class="model-info-item">
+                        <span class="model-info-label">Embed Dim</span>
+                        <span>${info.embed_dim}</span>
+                    </div>
+                    <div class="model-info-item">
+                        <span class="model-info-label">Layers</span>
+                        <span>${info.num_layers}</span>
+                    </div>
+                    <div class="model-info-item">
+                        <span class="model-info-label">Heads</span>
+                        <span>${info.num_heads}</span>
+                    </div>
+                    <div class="model-info-item">
+                        <span class="model-info-label">Loss</span>
+                        <span>${info.training_loss}</span>
+                    </div>
+                `;
+            }
+
+            connectWebSocket() {
+                const wsUrl = `ws://${window.location.host}/ws/generate`;
+                this.wsClient = new WebSocketClient(wsUrl);
+                
+                this.wsClient.onOpenCallback = () => {
+                    this.updateConnectionStatus(true);
+                };
+                
+                this.wsClient.onCloseCallback = () => {
+                    this.updateConnectionStatus(false);
+                    // 再接続を試みる
+                    setTimeout(() => this.connectWebSocket(), 3000);
+                };
+                
+                this.wsClient.onErrorCallback = (error) => {
+                    console.error('WebSocket error:', error);
+                };
+                
+                this.wsClient.onMessageCallback = (data) => {
+                    this.handleWebSocketMessage(data);
+                };
+                
+                this.wsClient.connect();
+            }
+            
+            handleWebSocketMessage(data) {
+                switch (data.type) {
+                    case 'token':
+                        this.chatUI.appendToLastMessage(data.token);
+                        break;
+                    case 'done':
+                        this.chatUI.finishLastMessage();
+                        this.isGenerating = false;
+                        this.elements.sendBtn.disabled = false;
+                        break;
+                    case 'error':
+                        this.chatUI.finishLastMessage();
+                        this.chatUI.addErrorMessage(data.error);
+                        this.isGenerating = false;
+                        this.elements.sendBtn.disabled = false;
+                        break;
+                }
+            }
+            
+            updateConnectionStatus(connected) {
+                this.elements.statusDot.classList.toggle('disconnected', !connected);
+                this.elements.statusText.textContent = connected ? '接続済み' : '切断';
+            }
+            
+            sendMessage() {
+                const prompt = this.elements.messageInput.value.trim();
+                
+                if (!prompt || !this.modelLoaded || this.isGenerating) return;
+                if (!this.wsClient || !this.wsClient.isConnected) {
+                    this.chatUI.addErrorMessage('サーバーに接続されていません');
+                    return;
+                }
+                
+                // ユーザーメッセージを表示
+                this.chatUI.addUserMessage(prompt);
+                this.elements.messageInput.value = '';
+                this.elements.messageInput.style.height = 'auto';
+                
+                // 生成開始
+                this.isGenerating = true;
+                this.elements.sendBtn.disabled = true;
+                
+                // アシスタントメッセージを準備
+                this.chatUI.addAssistantMessage();
+                
+                // WebSocketで送信
+                this.wsClient.send({
+                    type: 'generate',
+                    prompt: prompt,
+                    temperature: parseFloat(this.elements.temperature.value),
+                    top_k: parseInt(this.elements.topK.value),
+                    max_tokens: parseInt(this.elements.maxTokens.value)
+                });
+            }
+            
+            clearChat() {
+                this.chatUI.clearMessages();
+                this.chatUI.addAssistantMessage();
+                this.chatUI.appendToLastMessage('チャットをクリアしました。新しい会話を始めましょう！');
+                this.chatUI.finishLastMessage();
+            }
+            
+            showLoading(show) {
+                this.elements.loadingOverlay.classList.toggle('hidden', !show);
+            }
+        }
+        
+        // アプリ起動
+        document.addEventListener('DOMContentLoaded', () => {
+            new PlaygroundApp();
+        });
+    </script>
+</body>
+</html>

@@ -117,7 +117,7 @@ def load_checkpoint(
     Returns:
         チェックポイントの情報
     """
-    checkpoint = torch.load(path, map_location='cpu')
+    checkpoint = torch.load(path, map_location='cpu', weights_only=False)
     model.load_state_dict(checkpoint['model_state_dict'])
     
     if optimizer is not None and 'optimizer_state_dict' in checkpoint:
@@ -135,7 +135,8 @@ def train(
     dataloader: torch.utils.data.DataLoader,
     train_config: TrainConfig,
     device: torch.device,
-    checkpoint_dir: Union[str, Path] = "checkpoints"
+    checkpoint_dir: Union[str, Path] = "checkpoints",
+    resume_from: Optional[Union[str, Path]] = None
 ) -> List[float]:
     """
     学習ループを実行。
@@ -146,6 +147,7 @@ def train(
         train_config: 学習設定
         device: デバイス
         checkpoint_dir: チェックポイント保存先
+        resume_from: 再開するチェックポイントのパス（オプション）
         
     Returns:
         損失の履歴
@@ -165,15 +167,27 @@ def train(
         train_config.max_steps
     )
     
+    # チェックポイントから再開
+    start_step = 0
+    if resume_from is not None:
+        checkpoint = load_checkpoint(resume_from, model, optimizer, scheduler)
+        start_step = checkpoint.get('step', 0)
+        print(f"Resuming from step {start_step}")
+        # オプティマイザの状態をデバイスに移動
+        for state in optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.to(device)
+    
     # 損失関数
     criterion = nn.CrossEntropyLoss()
     
     # 学習ループ
     losses = []
-    step = 0
+    step = start_step
     data_iter = iter(dataloader)
     
-    pbar = tqdm(total=train_config.max_steps, desc="Training")
+    pbar = tqdm(total=train_config.max_steps, initial=start_step, desc="Training")
     
     while step < train_config.max_steps:
         # データを取得（エポックをまたぐ）
@@ -241,6 +255,34 @@ def train(
     return losses
 
 
+def find_latest_checkpoint(checkpoint_dir: Union[str, Path]) -> Optional[Path]:
+    """
+    最新のチェックポイントを探す。
+    
+    Args:
+        checkpoint_dir: チェックポイントディレクトリ
+        
+    Returns:
+        最新のチェックポイントのパス、なければNone
+    """
+    import re
+    checkpoint_dir = Path(checkpoint_dir)
+    if not checkpoint_dir.exists():
+        return None
+    
+    checkpoints = list(checkpoint_dir.glob("checkpoint_step*.pt"))
+    if not checkpoints:
+        return None
+    
+    # ステップ番号で数値ソート
+    def get_step(path: Path) -> int:
+        match = re.search(r'checkpoint_step(\d+)\.pt', path.name)
+        return int(match.group(1)) if match else 0
+    
+    checkpoints.sort(key=get_step)
+    return checkpoints[-1]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Train Mini Transformer")
     parser.add_argument("--data", type=str, default="data/sample.txt", help="Training data file")
@@ -249,20 +291,19 @@ def main():
     parser.add_argument("--lr", type=float, default=3e-4, help="Learning rate")
     parser.add_argument("--seq-len", type=int, default=128, help="Sequence length")
     parser.add_argument("--checkpoint-dir", type=str, default="checkpoints", help="Checkpoint directory")
+    parser.add_argument("--resume", type=str, default=None, help="Resume from checkpoint (path or 'latest')")
     args = parser.parse_args()
     
     # デバイス設定
-    device = torch.device("cpu")
-    print("Using CPU")
-    # if torch.backends.mps.is_available():
-    #     device = torch.device("mps")
-    #     print("Using MPS (Apple Silicon)")
-    # elif torch.cuda.is_available():
-    #     device = torch.device("cuda")
-    #     print("Using CUDA")
-    # else:
-    #     device = torch.device("cpu")
-    #     print("Using CPU")
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+        print("Using MPS (Apple Silicon M3 Pro)")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+        print("Using CUDA")
+    else:
+        device = torch.device("cpu")
+        print("Using CPU")
     
     # データ読み込み
     print(f"Loading data from {args.data}")
@@ -302,8 +343,23 @@ def main():
         max_steps=args.epochs * len(dataloader),
     )
     
+    # チェックポイントから再開するか確認
+    resume_from = None
+    if args.resume:
+        if args.resume == 'latest':
+            resume_from = find_latest_checkpoint(args.checkpoint_dir)
+            if resume_from:
+                print(f"Found latest checkpoint: {resume_from}")
+            else:
+                print("No checkpoint found, starting from scratch")
+        else:
+            resume_from = Path(args.resume)
+            if not resume_from.exists():
+                print(f"Checkpoint not found: {resume_from}, starting from scratch")
+                resume_from = None
+    
     # 学習実行
-    losses = train(model, dataloader, train_config, device, args.checkpoint_dir)
+    losses = train(model, dataloader, train_config, device, args.checkpoint_dir, resume_from)
     
     # トークナイザー保存
     tokenizer.save(Path(args.checkpoint_dir) / "tokenizer.json")
