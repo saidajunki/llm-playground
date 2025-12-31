@@ -1,0 +1,26 @@
+# Phase 2: 軽量LLMファインチューニング用依存関係
+
+# PyTorch
+torch>=2.0.0
+
+# Hugging Face
+transformers>=4.40.0
+datasets>=2.18.0
+accelerate>=0.28.0
+peft>=0.10.0  # LoRA用
+
+# トレーニング
+trl>=0.8.0  # SFT, DPO用
+bitsandbytes>=0.43.0  # 量子化用（オプション）
+
+# ユーティリティ
+tqdm>=4.66.0
+numpy>=1.24.0
+pandas>=2.0.0
+
+# 評価
+evaluate>=0.4.0
+
+# テスト
+pytest>=8.0.0
+hypothesis>=6.100.0

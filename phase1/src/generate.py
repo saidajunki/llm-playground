@@ -213,7 +213,21 @@ def main():
     
     # チェックポイント読み込み
     checkpoint = torch.load(args.checkpoint, map_location='cpu', weights_only=False)
-    config = checkpoint['config']
+    config_or_dict = checkpoint['config']
+    
+    # 設定を復元（ModelConfigオブジェクトまたは辞書に対応）
+    if isinstance(config_or_dict, ModelConfig):
+        config = config_or_dict
+    else:
+        config = ModelConfig(
+            vocab_size=config_or_dict.get('vocab_size', 5000),
+            embed_dim=config_or_dict.get('embed_dim', 384),
+            num_heads=config_or_dict.get('num_heads', 6),
+            num_layers=config_or_dict.get('num_layers', 6),
+            ff_dim=config_or_dict.get('ff_dim', 1536),
+            max_len=config_or_dict.get('max_len', 128),
+            dropout=config_or_dict.get('dropout', 0.1),
+        )
     
     # モデル作成と重み読み込み
     model = MiniGPT(config)

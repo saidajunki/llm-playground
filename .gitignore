@@ -35,6 +35,11 @@ training.log
 
 # Checkpoints (large files)
 phase1/checkpoints/*.pt
+phase1/checkpoints/**/*.pt
+phase2/checkpoints/**/*.pt
+
+# Models (large files)
+phase2/models/
 
 # pyenv
 .python-version
