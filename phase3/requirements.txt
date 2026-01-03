@@ -1,0 +1,21 @@
+# RAG System Dependencies
+
+# Embedding models
+sentence-transformers>=2.2.0
+
+# Vector store
+faiss-cpu>=1.7.0
+
+# LLM
+transformers>=4.35.0
+torch>=2.0.0
+
+# Database
+sqlalchemy>=2.0.0
+
+# Testing
+pytest>=7.0.0
+hypothesis>=6.0.0
+
+# Utilities
+tqdm>=4.65.0

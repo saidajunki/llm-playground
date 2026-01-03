@@ -1,0 +1,137 @@
+[
+  {
+    "id": "22cb532d-87c9-4e03-b492-6d7e1e0653ed",
+    "content": "# Phase 1: Mini Transformer from Scratch\n\nLLMの仕組みを理解するため、ミニTransformerをフルスクラッチで実装するプロジェクト。\n\n## 目的\n\n- Transformerアーキテクチャの各コンポーネントを自分の手で実装\n- Attention機構、Positional Encoding、学習ループなどの動作原理を体得\n- 小規模なテキスト生成モデルを完成させる\n\n## モデルスペック\n\n| パラメータ | 値 |\n|-----------|-----|\n| パラメータ数 | 約2000万〜3000万 |\n| 層数 | 6 |\n| 埋め込み次元 | 384 |\n| ヘッド数 | 6 |\n| コンテキスト長 | 256トークン |\n\n## ディレクトリ構成",
+    "metadata": {
+      "source": "/Users/saidajunki/Develop/saida/llm-playground/phase3/../phase1/README.md",
+      "filename": "README.md",
+      "extension": ".md",
+      "type": "markdown",
+      "timestamp": "2026-01-03T15:58:35.574130",
+      "size": 4418,
+      "chunk_index": 0,
+      "total_chunks": 9,
+      "original_doc_id": "6ec686ad-0a09-4f47-b26d-75b13934e42e"
+    }
+  },
+  {
+    "id": "60cf36c2-3171-46c1-8349-0b3889619299",
+    "content": " |\n| ヘッド数 | 6 |\n| コンテキスト長 | 256トークン |\n\n## ディレクトリ構成```\nphase1/\n├── src/\n│   ├── tokenizer.py      # 文字レベルトークナイザー\n│   ├── embedding.py      # Embedding + Positional Encoding\n│   ├── attention.py      # Self-Attention, Multi-Head Attention\n│   ├── feedforward.py    # Feed Forward Network\n│   ├── transformer.py    # Transformer Block\n│   ├── model.py          # 完全なMiniGPTモデル\n│   ├── train.py          # 学習ループ\n│   ├── generate.py       # テキスト生成\n│   └── dataset.py        # データセット処理\n├── tests/                # テストコード\n├── data/                 # 学習データ",
+    "metadata": {
+      "source": "/Users/saidajunki/Develop/saida/llm-playground/phase3/../phase1/README.md",
+      "filename": "README.md",
+      "extension": ".md",
+      "type": "markdown",
+      "timestamp": "2026-01-03T15:58:35.574130",
+      "size": 4418,
+      "chunk_index": 1,
+      "total_chunks": 9,
+      "original_doc_id": "6ec686ad-0a09-4f47-b26d-75b13934e42e"
+    }
+  },
+  {
+    "id": "67a02262-5b46-4a55-9232-455af4687d98",
+    "content": "        # テストコード\n├── data/                 # 学習データ├── checkpoints/          # モデルチェックポイント\n└── notebooks/            # 実験・可視化用ノートブック\n```",
+    "metadata": {
+      "source": "/Users/saidajunki/Develop/saida/llm-playground/phase3/../phase1/README.md",
+      "filename": "README.md",
+      "extension": ".md",
+      "type": "markdown",
+      "timestamp": "2026-01-03T15:58:35.574130",
+      "size": 4418,
+      "chunk_index": 2,
+      "total_chunks": 9,
+      "original_doc_id": "6ec686ad-0a09-4f47-b26d-75b13934e42e"
+    }
+  },
+  {
+    "id": "8dd0822d-ce58-4ed8-bd4a-09a58df33df9",
+    "content": "ポイント\n└── notebooks/            # 実験・可視化用ノートブック\n```## セットアップ\n\n```bash\ncd phase1\npip install -r requirements.txt\n```\n\n## 使い方\n\n### 学習\n\n```bash\npython -m src.train --data data/sample.txt --epochs 10\n```\n\nオプション:\n- `--batch-size`: バッチサイズ（デフォルト: 32）\n- `--lr`: 学習率（デフォルト: 3e-4）\n- `--seq-len`: シーケンス長（デフォルト: 128）\n\n### テキスト生成\n\n```bash\npython -m src.generate --checkpoint checkpoints/checkpoint_final.pt --prompt \"今日は\"\n```\n\nオプション:\n- `--max-tokens`: 最大生成トークン数（デフォルト: 100）\n- `--temperature`: サンプリング温度（デフォルト: 0.8）\n- `--top-k`: Top-kサンプリング（デフォルト: 50）\n\n### テスト実行",
+    "metadata": {
+      "source": "/Users/saidajunki/Develop/saida/llm-playground/phase3/../phase1/README.md",
+      "filename": "README.md",
+      "extension": ".md",
+      "type": "markdown",
+      "timestamp": "2026-01-03T15:58:35.574130",
+      "size": 4418,
+      "chunk_index": 3,
+      "total_chunks": 9,
+      "original_doc_id": "6ec686ad-0a09-4f47-b26d-75b13934e42e"
+    }
+  },
+  {
+    "id": "3256b95a-633c-4211-8c44-d189f31c2fd3",
+    "content": ".8）\n- `--top-k`: Top-kサンプリング（デフォルト: 50）\n\n### テスト実行```bash\npython -m pytest tests/ -v\n```\n\n## アーキテクチャ",
+    "metadata": {
+      "source": "/Users/saidajunki/Develop/saida/llm-playground/phase3/../phase1/README.md",
+      "filename": "README.md",
+      "extension": ".md",
+      "type": "markdown",
+      "timestamp": "2026-01-03T15:58:35.574130",
+      "size": 4418,
+      "chunk_index": 4,
+      "total_chunks": 9,
+      "original_doc_id": "6ec686ad-0a09-4f47-b26d-75b13934e42e"
+    }
+  },
+  {
+    "id": "2b7e12bf-e7a7-4d39-b25c-142ba93a8145",
+    "content": "```bash\npython -m pytest tests/ -v\n```\n\n## アーキテクチャ```\nInput Text → Tokenizer → Token IDs\n    ↓\nToken Embedding + Positional Encoding\n    ↓\n┌─────────────────────────────────┐\n│     Transformer Block × 6       │\n│  ┌───────────────────────────┐  │\n│  │ Layer Norm                │  │\n│  │ Multi-Head Attention      │  │\n│  │ + Residual Connection     │  │\n│  │ Layer Norm                │  │\n│  │ Feed Forward Network      │  │\n│  │ + Residual Connection     │  │\n│  └───────────────────────────┘  │\n└─────────────────────────────────┘\n    ↓",
+    "metadata": {
+      "source": "/Users/saidajunki/Develop/saida/llm-playground/phase3/../phase1/README.md",
+      "filename": "README.md",
+      "extension": ".md",
+      "type": "markdown",
+      "timestamp": "2026-01-03T15:58:35.574130",
+      "size": 4418,
+      "chunk_index": 5,
+      "total_chunks": 9,
+      "original_doc_id": "6ec686ad-0a09-4f47-b26d-75b13934e42e"
+    }
+  },
+  {
+    "id": "c4039ee2-d555-4882-882b-45a9159f98f4",
+    "content": "────┘  │\n└─────────────────────────────────┘\n    ↓Final Layer Norm → Linear → Softmax\n    ↓\nNext Token Probabilities\n```",
+    "metadata": {
+      "source": "/Users/saidajunki/Develop/saida/llm-playground/phase3/../phase1/README.md",
+      "filename": "README.md",
+      "extension": ".md",
+      "type": "markdown",
+      "timestamp": "2026-01-03T15:58:35.574130",
+      "size": 4418,
+      "chunk_index": 6,
+      "total_chunks": 9,
+      "original_doc_id": "6ec686ad-0a09-4f47-b26d-75b13934e42e"
+    }
+  },
+  {
+    "id": "70477af0-6491-465f-bd44-3e4e7b5fc394",
+    "content": "inear → Softmax\n    ↓\nNext Token Probabilities\n```## 主要コンポーネント解説\n\n### 1. Tokenizer (tokenizer.py)\n文字レベルのトークナイザー。テキストを文字単位でトークンIDに変換。\n\n### 2. Embedding (embedding.py)\n- **TokenEmbedding**: トークンIDを密なベクトルに変換\n- **PositionalEncoding**: sin/cosを使った位置情報の付与\n\n### 3. Attention (attention.py)\n- **SelfAttention**: Scaled Dot-Product Attention\n- **MultiHeadAttention**: 複数のAttentionヘッドを並列実行\n\n### 4. Transformer Block (transformer.py)\nPre-LN構成のTransformerブロック。Attention + FFN + 残差接続。\n\n### 5. MiniGPT (model.py)\n全コンポーネントを統合したDecoder-only Transformer。",
+    "metadata": {
+      "source": "/Users/saidajunki/Develop/saida/llm-playground/phase3/../phase1/README.md",
+      "filename": "README.md",
+      "extension": ".md",
+      "type": "markdown",
+      "timestamp": "2026-01-03T15:58:35.574130",
+      "size": 4418,
+      "chunk_index": 7,
+      "total_chunks": 9,
+      "original_doc_id": "6ec686ad-0a09-4f47-b26d-75b13934e42e"
+    }
+  },
+  {
+    "id": "820fa94f-47bd-4f8a-ae1f-5814bfc3c0fb",
+    "content": " (model.py)\n全コンポーネントを統合したDecoder-only Transformer。## 学習目的での注意点\n\nこのモデルは「会話ができる」レベルではありません。目的は：\n- Transformerの仕組みを理解すること\n- 学習データのパターンを模倣した短いテキスト生成ができること\n- Phase 2で軽量モデルを使う際の基礎知識を得ること\n\n## 次のステップ（Phase 2）\n\nPhase 2では、TinyLlamaやPhi-3-miniなどの軽量オープンソースモデルを使って、実際に会話ができるレベルのモデルを構築します。",
+    "metadata": {
+      "source": "/Users/saidajunki/Develop/saida/llm-playground/phase3/../phase1/README.md",
+      "filename": "README.md",
+      "extension": ".md",
+      "type": "markdown",
+      "timestamp": "2026-01-03T15:58:35.574130",
+      "size": 4418,
+      "chunk_index": 8,
+      "total_chunks": 9,
+      "original_doc_id": "6ec686ad-0a09-4f47-b26d-75b13934e42e"
+    }
+  }
+]
