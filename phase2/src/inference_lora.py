@@ -11,7 +11,7 @@ from pathlib import Path
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from lora import LoRAConfig, LoRAModel, LoRAInference
+from src.lora import LoRAConfig, LoRAModel, LoRAInference
 
 
 def main():
